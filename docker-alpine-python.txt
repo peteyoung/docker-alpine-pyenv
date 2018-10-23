@@ -1,0 +1,163 @@
+# fetch latest Alpine image
+docker pull alpine
+
+# run Alpine in a container
+docker run -it alpine /bin/sh
+
+# install man
+apk add man man-pages mdocml-apropos less less-doc
+export PAGER=less
+
+# install bash
+apk add bash bash-doc bash-completion
+
+# install curl
+apk add curl curl-doc
+
+# install git
+apk add git git-doc
+
+# install gcc and some libs
+apk add build-base gcc-doc
+
+# explicitly install patch (the one with Alpine's build-base doesn't support force) to fix: patch: unrecognized option: force
+apk add patch
+
+# install (may not need)
+#apk add zip zip-doc
+
+# install zlib source to fix: zipimport.ZipImportError: can't decompress data; zlib not available
+apk add zlib-dev
+
+# install libffi source to fix: ModuleNotFoundError: No module named '_ctypes'
+apk add libffi-dev
+
+# install linux headers to fix: ModuleNotFoundError: No module named '_socket'
+apk add linux-headers
+
+# install readline source to fix: WARNING: The Python readline extension was not compiled. Missing the GNU readline lib?
+apk add readline-dev
+
+# install openssl and source to fix: ERROR: The Python ssl extension was not compiled. Missing the OpenSSL lib?
+apk add openssl openssl-dev
+
+# install sqlite source to fix: WARNING: The Python sqlite3 extension was not compiled. Missing the SQLite3 lib?
+apk add sqlite-dev
+
+# install bzip source to fix: WARNING: The Python bz2 extension was not compiled. Missing the bzip2 lib?
+apk add bzip2-dev
+
+# install pyenv pyenv-doctor pyenv-installer pyenv-update pyenv-virtualenv pyenv-which-ext
+curl https://raw.githubusercontent.com/pyenv/pyenv-installer/master/bin/pyenv-installer | bash
+# these need to go into your .bashrc
+export PATH="/root/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+
+# install a python
+pyenv install 3.7.0
+
+
+
+
+### didn't need
+# apk add ca-certificates ncurses-dev 
+
+
+
+### Nice to haves
+highlight with ccat alias
+vim
+
+
+
+
+### How to fix "error: conflicting types for 'posix_close'" for older versions during pyenv install
+### on a musl libc distro like Alpine
+# [[PATCH] fail to compile posixmodule due to name clash with posix_close](https://bugs.python.org/issue20594)
+
+## Ex. 1
+curl -O https://www.python.org/ftp/python/2.6.6/Python-2.6.6.tgz
+tar -zxvf Python-2.6.6.tgz
+cd Python-2.6.6
+cp Modules/posixmodule.c Modules/posixmodule.c.orig
+vi Modules/posixmodule.c
+# replace "posix_close" with "posix_closex". should only be 2 places. don't do global change
+diff -u Modules/posixmodule.c.orig Modules/posixmodule.c > ~/posix_close.patch
+
+--- ./Modules/posixmodule.c.orig	2018-10-11 18:39:37.000000000 -0500
++++ ./Modules/posixmodule.c	2018-10-11 18:41:36.000000000 -0500
+@@ -6357,7 +6357,7 @@
+ Close a file descriptor (for low level IO).");
+
+ static PyObject *
+-posix_close(PyObject *self, PyObject *args)
++posix_closex(PyObject *self, PyObject *args)
+ {
+     int fd, res;
+     if (!PyArg_ParseTuple(args, "i:close", &fd))
+@@ -8684,7 +8684,7 @@
+     {"tcsetpgrp",       posix_tcsetpgrp, METH_VARARGS, posix_tcsetpgrp__doc__},
+ #endif /* HAVE_TCSETPGRP */
+     {"open",            posix_open, METH_VARARGS, posix_open__doc__},
+-    {"close",           posix_close, METH_VARARGS, posix_close__doc__},
++    {"close",           posix_closex, METH_VARARGS, posix_close__doc__},
+     {"closerange",      posix_closerange, METH_VARARGS, posix_closerange__doc__},
+     {"dup",             posix_dup, METH_VARARGS, posix_dup__doc__},
+     {"dup2",            posix_dup2, METH_VARARGS, posix_dup2__doc__},
+
+# then run pyenv with the patch.
+cd ..
+cat posix_close.patch | pyenv install -p -v 2.6.6
+
+## Ex. 2
+curl -O https://www.python.org/ftp/python/3.3.3/Python-3.3.3.tgz
+tar -zxvf Python-3.3.3.tgz
+cd Python-3.3.3
+cp Modules/posixmodule.c Modules/posixmodule.c.orig
+vi Modules/posixmodule.c
+# replace "posix_close" with "posix_closex". should only be 2 places. don't do global auto replace
+diff -u Modules/posixmodule.c.orig Modules/posixmodule.c > ~/posix_close.patch
+cd ..
+cat posix_close.patch | pyenv install -p -v 3.3.3
+
+
+### Notes
+
+# https://wiki.alpinelinux.org/wiki/How_to_get_regular_stuff_working
+
+# https://github.com/vadviktor/docker-pyenv-alpine
+
+# https://hackernoon.com/top-10-docker-commands-you-cant-live-without-54fb6377f481
+
+# kill all running containers
+docker kill $(docker ps -q)
+
+# delete all stopped containers
+docker rm $(docker ps -a -q)
+
+# delete all images
+docker rmi $(docker images -q)
+
+# show installed deps
+apk info | sort
+
+# activate a python
+pyenv local 3.7.0
+
+# check the version
+python --version
+
+# show available versions for installation
+pyenv install --list
+
+
+# pyenv installs pip for all versions
+~ # pyenv local 2.6.6
+~ # python --version
+Python 2.6.6
+~ # pip -V
+pip 9.0.3 from /root/.pyenv/versions/2.6.6/lib/python2.6/site-packages (python 2.6)
+
+
+
