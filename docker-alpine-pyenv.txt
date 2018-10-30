@@ -160,4 +160,10 @@ Python 2.6.6
 pip 9.0.3 from /root/.pyenv/versions/2.6.6/lib/python2.6/site-packages (python 2.6)
 
 
+# Dockerfile sudo setup
+https://stackoverflow.com/questions/25845538/how-to-use-sudo-inside-a-docker-container
+https://www.mowson.org/karl/2016/2016-05-20_alpinelinux_vm_under_virtualbox/
 
+# Interesting links
+http://blog.zot24.com/tips-tricks-with-alpine-docker/
+https://github.com/mhart/alpine-node/issues/48

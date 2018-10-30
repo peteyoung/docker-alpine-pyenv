@@ -39,6 +39,3 @@ apk add sqlite-dev
 
 # install bzip source to fix: WARNING: The Python bz2 extension was not compiled. Missing the bzip2 lib?
 apk add bzip2-dev
-
-# install pyenv pyenv-doctor pyenv-installer pyenv-update pyenv-virtualenv pyenv-which-ext
-curl https://raw.githubusercontent.com/pyenv/pyenv-installer/master/bin/pyenv-installer | bash
