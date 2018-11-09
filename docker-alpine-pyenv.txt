@@ -49,8 +49,9 @@ apk add bzip2-dev
 
 # install pyenv pyenv-doctor pyenv-installer pyenv-update pyenv-virtualenv pyenv-which-ext
 curl https://raw.githubusercontent.com/pyenv/pyenv-installer/master/bin/pyenv-installer | bash
+
 # these need to go into your .bashrc
-export PATH="/root/.pyenv/bin:$PATH"
+export PATH="$HOME/.pyenv/bin:$PATH"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 
@@ -157,7 +158,7 @@ pyenv install --list
 ~ # python --version
 Python 2.6.6
 ~ # pip -V
-pip 9.0.3 from /root/.pyenv/versions/2.6.6/lib/python2.6/site-packages (python 2.6)
+pip 9.0.3 from /home/developer/.pyenv/versions/2.6.6/lib/python2.6/site-packages (python 2.6)
 
 
 # Dockerfile sudo setup
