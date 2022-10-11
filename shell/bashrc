@@ -1,0 +1,3 @@
+export PAGER=less
+
+source $HOME/.init_pyenv
