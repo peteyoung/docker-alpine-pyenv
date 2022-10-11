@@ -7,6 +7,9 @@ export PAGER=less
 # install bash
 apk add bash bash-doc bash-completion
 
+# install tree
+apk add tree
+
 # install curl
 apk add curl curl-doc
 
