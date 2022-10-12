@@ -7,8 +7,8 @@ export PAGER=less
 # install bash
 apk add bash bash-doc bash-completion
 
-# install tree
-apk add tree
+# install utilities
+apk add tree neovim
 
 # install curl
 apk add curl curl-doc
