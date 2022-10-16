@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# These are requirements of SciPy
-# NumPy will use Lapack if it's availble
+# Required by NumPy
 apk add gfortran
-apk add blas blas-dev
-apk add lapack lapack-dev
+
+# NumPy will use Lapack and BLAS ABIs if availble
+#apk add lapack lapack-dev blas blas-dev
+apk add openblas openblas-dev
 
 #PYTHON_VIRTUAL_ENV=p${PYTHON_VERSION}
 
