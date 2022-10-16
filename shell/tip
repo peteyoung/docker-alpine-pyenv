@@ -1,0 +1,12 @@
+# A convenience function for timing and logging pip installs
+function tip {
+  if [[ $# -eq 0 ]]; then
+    echo "No package given"
+    return 1
+  fi
+
+  PACKAGE=$1
+  PACKAGE_NAME=$(echo "$PACKAGE" | tr -s '==' '*' | cut -d'*' -f 1)
+
+  { time pip install -Ivvv $PACKAGE; } 2>&1 | tee ${PACKAGE_NAME}-$(date +"%s").log
+}

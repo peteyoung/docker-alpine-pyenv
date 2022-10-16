@@ -8,6 +8,7 @@ ENV PYTHON_VERSION=3.9.14
 COPY shell/bash_profile $HOME/.bash_profile
 COPY shell/bashrc $HOME/.bashrc
 COPY shell/init_pyenv $HOME/.init_pyenv
+COPY shell/tip $HOME/.tip
 
 COPY provision/container.sh $HOME/.provision/container.sh
 COPY provision/python.sh $HOME/.provision/python.sh

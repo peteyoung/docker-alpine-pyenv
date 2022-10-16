@@ -1,3 +1,4 @@
 export PAGER=less
 
+source $HOME/.tip
 source $HOME/.init_pyenv
