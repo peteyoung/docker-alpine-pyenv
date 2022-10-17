@@ -8,5 +8,8 @@ function tip {
   PACKAGE=$1
   PACKAGE_NAME=$(echo "$PACKAGE" | tr -s '==' '*' | cut -d'*' -f 1)
 
-  { time pip install -vvv $PACKAGE; } 2>&1 | tee ${PACKAGE_NAME}-$(date +"%s").log
+  shift
+  PIP_OPTS=$@
+
+  { time pip install -vvv $PACKAGE $PIP_OPTS; } 2>&1 | tee ${PACKAGE_NAME}-$(date +"%s").log
 }
