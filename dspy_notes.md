@@ -439,18 +439,25 @@ Is this the same issue with setup.py or setuptools as with building Python?
 
 --------------------------------
 
-Can  I use OpenBLAS in place of Lapack and BLAS?
+__Q:__ Can I use OpenBLAS in place of BLAS and LAPACK?
+__A:__ According to [this GitHub issue answer](https://github.com/xianyi/OpenBLAS/issues/203#issuecomment-15296123), OpenBLAS "includes a full LAPACK lib (with some parts optimized)."
 
-[Changes/OpenBLAS as default BLAS](https://fedoraproject.org/wiki/Changes/OpenBLAS_as_default_BLAS)
+Install BLAS and LAPACK on Alpine.
 
 ```sh
-# OpenBLAS may satisfy both Lapack and BLAS dependencies.
-apk add openblas openblas-dev
-
-# lapack will install blas if it's not already. openblas has no effect.
+# LAPACK will install BLAS if it's not already installed.
 apk add blas blas-dev
 apk add lapack lapack-dev
 ```
+
+Install OpenBLAS on Alpine.
+
+```sh
+# OpenBLAS can satisfy both BLAS and LAPACK dependencies.
+apk add openblas openblas-dev
+```
+
+--------------------------------
 
 Looked up versions for dependencies of libraries specified in the book that had release dates that were close.
 
@@ -502,7 +509,7 @@ MAKEFLAGS="-j2" pip install -vvv numpy==1.21.2 2>&1 | tee numpy-j2-$(date +"%s")
 tip numpy==1.21.2
 ```
 
-`-vvv logging` shows `NOT AVAILABLE` warnings for Lapack, BLAS, OpenBLAS, ATLAS, and MKL\_RT.
+`-vvv logging` shows `NOT AVAILABLE` warnings for LAPACK, BLAS, OpenBLAS, ATLAS, and MKL\_RT.
 NumPy still builds, but it uses the `numpy.linalg.lapack_lite` extension.
 
 ```text
@@ -640,8 +647,7 @@ ERROR: Ignored the following versions that require a different python version:
 1.7.1 Requires-Python >=3.7,<3.10
 ```
 
-This error made me go back and add Lapack and BLAS at first, but then I switched to OpenBLAS.
-Then I rebuilt NumPy each time.
+This error made me go back and add BLAS and LAPACK at first and rebuild NumPy. But then I switched to OpenBLAS and rebuilt NumPy again.
 
 ```text
   numpy.distutils.system_info.NotFoundError: No BLAS/LAPACK libraries found.
@@ -756,6 +762,91 @@ grep -v \
 
 --------------------------------
 
+Decided to try a different way to build based on [Building SciPy from source](https://scipy.github.io/devdocs/dev/contributor/building.html#building-scipy-from-source). I can't use the `tip` function because of the extra `--no-binary scipy` option. We can fix that later.
+
+```sh
+{ time pip install -vvv scipy==1.7.0 --no-binary scipy; } 2>&1 | tee scipy-$(date +"%s").log
+```
+
+That actually seemed to do the trick.
+
+```text
+(p3.9.14) bash-5.1# pip list
+Package    Version
+---------- -------
+numpy      1.21.2
+pip        22.3
+scipy      1.7.0
+setuptools 58.1.0
+```
+
+Compare it to installing without `--no-binary scipy`.
+
+```text
+(p3.9.14) bash-5.1# pip list
+Package    Version
+---------- -------
+beniget    0.4.1
+Cython     0.29.24
+gast       0.5.3
+numpy      1.23.3
+pip        22.2.2
+ply        3.11
+pythran    0.10.0
+scipy      1.7.0
+setuptools 58.1.0
+```
+
+Even the install time was much quicker this way.
+
+```text
+real	22m52.249s
+user	31m16.503s
+sys	3m33.097s
+```
+
+vs.
+
+```text
+real	29m31.722s
+user	39m54.402s
+sys	4m43.157s
+```
+
+#### Update `tip` and list of libs to install
+
+Turns out `Cython` and `pythran` are just build time dependencies. They don't actually get installed. SciPy will install them, though, if you don't specify `--no-binaries` to `pip`. These are all we need to install.
+
+```sh
+tip numpy==1.21.2
+tip scipy==1.7.0 --no-binary scipy
+tip scikit-learn==1.0
+tip matplotlib==3.4.3
+tip pandas==1.3.2
+```
+
+And here's and updated `tip` function to handle passing parameters on to `pip`.
+
+```sh
+function tip {
+  if [[ $# -eq 0 ]]; then
+    echo "No package given"
+    return 1
+  fi
+
+  PACKAGE=$1
+  PACKAGE_NAME=$(echo "$PACKAGE" | tr -s '==' '*' | cut -d'*' -f 1)
+
+  shift
+  PIP_OPTS=$@
+
+  { time pip install -vvv $PACKAGE $PIP_OPTS; } 2>&1 | tee ${PACKAGE_NAME}-$(date +"%s").log
+}
+```
+
+
+--------------------------------
+
 These required  `apk add gfortran`.
 
 ```text
@@ -776,18 +867,50 @@ scikit-learn (while trying to compile scipy-1.9.2):
         Running `g95 -V` gave "[Errno 2] No such file or directory: 'g95'"
 ```
 
-But I don't remember where I ran into them...
+But I don't remember where I ran into them. Had to what to remove from the basic image first.
 
---------------------------------
+```text
+(p3.9.14) bash-5.1# apk list -I | grep -i "fortran"
+libgfortran-11.2.1_git20220219-r2 x86_64 {gcc} (GPL-2.0-or-later LGPL-2.1-or-later) [installed]
+gfortran-11.2.1_git20220219-r2 x86_64 {gcc} (GPL-2.0-or-later LGPL-2.1-or-later) [installed]
 
-Decided to try a different way to build based on [Building SciPy from source](https://scipy.github.io/devdocs/dev/contributor/building.html#building-scipy-from-source).
-
-```sh
-{ time pip install -vvv scipy==1.7.0 --no-binary scipy; } 2>&1 | tee scipy-$(date +"%s").log
+(p3.9.14) bash-5.1# apk list -I | grep -i "blas"
+openblas-dev-0.3.20-r0 x86_64 {openblas} (BSD-3-Clause) [installed]
+openblas-ilp64-0.3.20-r0 x86_64 {openblas} (BSD-3-Clause) [installed]
+openblas-0.3.20-r0 x86_64 {openblas} (BSD-3-Clause) [installed]
 ```
 
-This should be fun...
+Let's remove them. Hopefully dependencies get pulled in.
 
+```sh
+apk del openblas openblas-dev gfortran
+```
+
+Ok, noting comes up after rerunning the `grep` statments above.
+
+Let's try installing NumPy
+
+```sh
+tip numpy==1.21.2
+```
+
+And then SciPy.
+
+```sh
+tip scipy==1.7.0 --no-binary scipy
+```
+
+Got the missing BLAS and LAPACK error.
+
+```text
+  numpy.distutils.system_info.NotFoundError: No BLAS/LAPACK libraries found.
+  To build Scipy from sources, BLAS & LAPACK libraries need to be installed.
+  See site.cfg.example in the Scipy source directory and
+  https://docs.scipy.org/doc/scipy/reference/building/index.html for details.
+  error: subprocess-exited-with-error
+```
+
+Hmm, I bet the Fortran error happened during the Ubuntu attempt.
 
 # Resources:
 ### Ubuntu 22.04
@@ -826,22 +949,20 @@ This should be fun...
 * pyenv-virtualenv: prompt changing will be removed from future release.
   *[Why is prompt changing being removed? #268](https://github.com/pyenv/pyenv-virtualenv/issues/268)
   *[Question regarding prompt changing #135](https://github.com/pyenv/pyenv-virtualenv/issues/135)
-  *[]()
 * pip
   * [pip installation](https://pip.pypa.io/en/stable/installation/)
   * [Installing specific package version with pip](https://stackoverflow.com/a/5226504)
 * gfortran error
   * ["getting requirement to build wheel error " when trying to install pillow , seaborn](https://stackoverflow.com/questions/73257196/getting-requirement-to-build-wheel-error-when-trying-to-install-pillow-seab)
-* Lapack, BLAS, ATLAS, & mkl_rt error (numpy, scipy)
+* LAPACK, BLAS, ATLAS, & mkl_rt error (numpy, scipy)
   * [Qiime 1 Forum: Numpy is installed, but can't find lapack/blas](https://groups.google.com/g/qiime-forum/c/bdDT4CF4vtM)
   * [Qiime 1 Forum: Native install on Ubuntu 14.04 LTS](https://groups.google.com/g/qiime-forum/c/8dVlTtlg59M/m/X3aUWH6DOQMJ)
   * [What is the relation between BLAS, LAPACK and ATLAS](https://stackoverflow.com/questions/17858104/what-is-the-relation-between-blas-lapack-and-atlas)
   * [No BLAS/LAPACK libraries found when installing SciPy](https://stackoverflow.com/questions/69954587/no-blas-lapack-libraries-found-when-installing-scipy/70880741#70880741)
   * [SciPy: Building from sources](https://docs.scipy.org/doc/scipy/dev/contributor/building.html)
-* Lapack, BLAS, and OpenBLAS
+* LAPACK, BLAS, and OpenBLAS
   * [Link against openblas; do I need still Lapack?](https://stackoverflow.com/questions/32925267/link-against-openblas-do-i-need-still-lapack)
   * [combining OpenBLAS with LAPACK #203](https://github.com/xianyi/OpenBLAS/issues/203)
-  * []()
 * Building packages from source
   * [NumPy](https://numpy.org/doc/1.21/user/building.html)
   * [SciPy](https://docs.scipy.org/doc/scipy/dev/contributor/building.html)
@@ -919,6 +1040,110 @@ This should be fun...
       
       ```
 
+# Deeper Dive into the BLAS and LAPACK Ecosystem
+
+Here's a good, concise [overview of what BLAS, LAPACK, and ATLAS are](https://stackoverflow.com/a/17858345).
+
+> __BLAS__ is a collection of low-level matrix and vector arithmetic operations (“multiply a vector by a scalar”, “multiply two matrices and add to a third matrix”, etc ...).
+>
+> __LAPACK__ is a collection of higher-level linear algebra operations. Things like matrix factorizations (LU, LLt, QR, SVD, Schur, etc) that are used to do things like “find the eigenvalues of a matrix”, or “find the singular values of a matrix”, or “solve a linear system”.
+>
+> __ATLAS__ is a portable reasonably good implementation of the BLAS interfaces, that also implements a few of the most commonly used LAPACK operations.
+
+Insights from a [StackOverlow comment](https://stackoverflow.com/questions/17858104/what-is-the-relation-between-blas-lapack-and-atlas#comment95504116_42212642) on the confusion over BLAS being an API or implementation.
+
+> I think part of the confusion is that BLAS is an API/specification, but there is also a "Reference Implementation" of BLAS (from Netlib) that is also referred to as just the "BLAS library". Usually when people say BLAS they mean the API, because the Reference Implementation is non-optimized, so it's not used much in practice/industry. ATLAS provides an optimized implementation of a few of the LAPACK subroutines, and then optionally pulls in the rest of them from LAPACK itself to produce a complete LAPACK implementation in the built ATLAS lib files.
+
+### Why choose OpenBLAS over BLAS or ATLAS?
+
+[Fedora's Statement on OpenBLAS over ATLAS or BLAS](https://fedoraproject.org/wiki/Changes/OpenBLAS_as_default_BLAS#Detailed_Description)
+
+> Most application use ATLAS because it's faster than reference BLAS. However, it doesn't support runtime CPU detection, so it must be built for a particular CPU. OpenBLAS is a competing BLAS implementation based on GotoBLAS2 that is and supports runtime CPU detection and all current Fedora primary arches.
+
+
+
+
+### OpenBLAS and LAPACK
+
+#### A brief hierarchy of who inspired whom.
+
+* BLAS
+  * ATLAS
+  * GotoBLAS
+    * OpenBLAS
+    * BLIS
+  * MKL
+
+#### BLAS implementations and where to find them.
+
+* BLAS: Basic Linear Algebra Subprograms
+  * [Wikipedia](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms)
+  * [GitHub: BLAS](https://github.com/Reference-LAPACK/lapack/tree/master/BLAS)
+  * [GitHub: CBLAS](https://github.com/Reference-LAPACK/lapack/tree/master/CBLAS)
+  * [Home](https://netlib.org/blas/)
+* GotoBLAS
+  * [Wikipedia](https://en.wikipedia.org/wiki/GotoBLAS)
+  * [Source Code](https://www.tacc.utexas.edu/research-development/tacc-software/gotoblas2)
+  * [Home](https://www.tacc.utexas.edu/research-development/tacc-software/gotoblas2)
+  * More Info
+    * Implementation of Algorithm in Regards to Memory Layers
+      * [LAFF-On 5.5.2 The GotoBLAS algorithm](https://www.youtube.com/watch?v=07SMaudtH6k)
+      * [5.4.2Animation of High Performance Matrix-Matrix Multiplication](https://www.youtube.com/watch?v=JzNpKDW07rw)
+    * [NYT Article on Kazushige Goto of GotoBLAS](https://www.nytimes.com/2005/11/28/technology/writing-the-fastest-code-by-hand-for-fun-a-human-computer-keeps.html) (hit ESC to stop paywall from loading)
+* OpenBLAS
+  * [Wikipedia](https://en.wikipedia.org/wiki/OpenBLAS)
+  * [GitHub](https://github.com/xianyi/OpenBLAS)
+  * [Home](https://www.openblas.net/)
+* BLIS
+  * [Wikipedia](https://en.wikipedia.org/wiki/BLIS_\(software\))
+  * [GitHub](https://github.com/flame/blis)
+  * [Home](https://github.com/flame/blis)
+* ATLAS: Automatically Tuned Linear Algebra Software
+  * [Wikipedia](https://en.wikipedia.org/wiki/Automatically_Tuned_Linear_Algebra_Software)
+  * [GitHub](https://github.com/math-atlas/math-atlas)
+  * [Home](https://math-atlas.sourceforge.net/)
+* MKL: Intel Math Kernel Library
+  * [Wikipedia](https://en.wikipedia.org/wiki/Math_Kernel_Library)
+  * [Home](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html#gs.fukgvf)
+* LAPACK
+  * [Wikipedia](https://en.wikipedia.org/wiki/LAPACK)
+  * [GitHub](https://github.com/Reference-LAPACK/lapack)
+  * [Home](https://netlib.org/lapack/)
+* FlexiBLAS
+  * [Git Repo](https://gitlab.mpi-magdeburg.mpg.de/software/flexiblas-release)
+  * [Home](https://www.mpi-magdeburg.mpg.de/projects/flexiblas)
+  * [R-Craft article about FlexiBLAS](https://r-craft.org/r-news/switch-blas-lapack-without-leaving-your-r-session/)
+
+
+[List of numerical libraries](https://en.wikipedia.org/wiki/List_of_numerical_libraries)
+
+#### Building OpenBLAS without LAPACK
+
+It can be done, but it's kind of moot. Most LAPACK alternatives have a BLAS implementation as well.
+
+The previously linked [overview of what BLAS and LAPACK are](https://stackoverflow.com/a/17858345)also states:
+
+> LAPACK is built on top of the BLAS. LAPACK is generally compiled separately from the BLAS, and can use whatever highly-optimized BLAS implementation you have available.
+
+[Build OpenBLAS without including LAPACK](https://github.com/xianyi/OpenBLAS/issues/203#issuecomment-15296123)
+
+OpenBLAS builds LAPACK unless `NO_LAPACK=1` is set.
+[Here's where LAPACK is added in the Makefile](https://github.com/xianyi/OpenBLAS/blob/11b2570c13edf27fe06396ddce7861677750a959/Makefile#L14-L17)
+[Here the maintainer states that LAPACK is built](https://github.com/xianyi/OpenBLAS/wiki/faq#my-build-fails-due-to-the-linker-error-multiple-definition-of-dlamc3_-what-is-the-problem)
+> Background: OpenBLAS implements optimized versions of some LAPACK functions, so we need to disable the reference versions. If this process fails we end with duplicated implementations of the same function.
+
+LAPACK folders in OpenBLAS' repo:
+
+* [lapack-netlib](https://github.com/xianyi/OpenBLAS/tree/develop/lapack-netlib)
+* [lapack](https://github.com/xianyi/OpenBLAS/tree/develop/lapack)
+* [relapack](https://github.com/xianyi/OpenBLAS/tree/develop/relapack)
+
+#### Learning
+
+[A Collection of Tutorials for different versions of BLAS and LAPACK](https://github.com/Foadsf/Cmathtuts/tree/dev)
+[Found via this Stack Overflow answer](https://stackoverflow.com/a/42212642)
+
+
 # Convenient Commands Redux
 
 ```sh
@@ -930,8 +1155,24 @@ docker build --progress=plain --no-cache -t dspy .
 
 docker run -it --rm -v "$(pwd)/build_logs":/build_logs dspy
 
-# committed a container with everything up to scipy installed based on lapack and blas
+# committed a container with everything up to scipy installed based on BLAS and LAPACK
 docker run -it --rm -v "$(pwd)/build_logs":/build_logs dspy_scipy_lapack_blas_01
+
+
+tip numpy==1.21.2
+
+{ time pip install -vvv scipy==1.7.0 --no-binary scipy; } 2>&1 | tee scipy-$(date +"%s").log
+
+apk list --installed
+apk del openblas openblas-dev gfortran
+
+
 ```
 
 
+
+
+```text
+    Installing build dependencies: started
+    Running command pip subprocess to install build dependencies
+```
