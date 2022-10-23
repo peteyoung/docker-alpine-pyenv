@@ -1,24 +1,15 @@
-## Quick Commands
+# What should have been on the sign at the entrance
 
-Ubuntu
+The path is long and arduous, with many twists and turns. You will slip and fall into the abyss many times. I hope you enjoy climbing. What should take only an hour will cost you a week.
 
-```sh
-docker run -it --rm -v "$(pwd)/build_logs":/build_logs ubuntu
+What kept me from just dropping this approach and moving on:
 
-apt update && apt -y upgrade
-```
+1. It became a confusing blend of installing a binary package and building from source.
+1. Building from source is its own special reward when you finally get it right.
+1. I failed to read NumPy's and SciPy's instructions for building from source. I was in my "package mind."
+1. Reading up on what BLAS and LAPACK are as well as about their various implementations deeply satisfied my maven nature.
+1. I had to make it to the end.
 
-Alpine
-
-```sh
-docker build -t dspy .
-
-time docker build --progress=plain --no-cache -t dspy .
-
-docker run -it --rm dspy
-
-docker run -it --rm -v "$(pwd)/build_logs":/build_logs dspy
-```
 
 # The Try with Ubuntu 22.04
 
@@ -289,7 +280,6 @@ Obviously, the next step is to use a virtual-env, but I already had something a 
 
 I have an image built on Alpine with `pyenv`, `pyenv virtualenv`, and the necessary build chain.
 
-# YOU ARE HERE ###################
 # Alpine
 
 ```sh
@@ -912,6 +902,51 @@ Got the missing BLAS and LAPACK error.
 
 Hmm, I bet the Fortran error happened during the Ubuntu attempt.
 
+### scikit-learn
+
+```sh
+tip scikit-learn==1.0
+```
+
+Ran for a bit.
+
+```sh
+Successfully installed joblib-1.2.0 scikit-learn-1.0 threadpoolctl-3.1.0
+...
+real	16m49.937s
+user	34m29.522s
+sys	4m0.870s
+```
+
+```text
+(p3.9.14) bash-5.1# pip list
+Package       Version
+------------- -------
+joblib        1.2.0
+numpy         1.21.2
+pip           22.3
+scikit-learn  1.0
+scipy         1.7.0
+setuptools    58.1.0
+threadpoolctl 3.1.0
+```
+
+### matplotlib
+
+```sh
+tip matplotlib==3.4.3
+```
+---
+```text
+Successfully installed cycler-0.11.0 kiwisolver-1.4.4 matplotlib-3.4.3 pillow-9.2.0 pyparsing-3.0.9 python-dateutil-2.8.2 six-1.16.0
+...real	2m19.157s
+user	1m57.540s
+sys	0m19.265s
+```
+
+
+
+
 # Resources:
 ### Ubuntu 22.04
 
@@ -1143,6 +1178,28 @@ LAPACK folders in OpenBLAS' repo:
 [A Collection of Tutorials for different versions of BLAS and LAPACK](https://github.com/Foadsf/Cmathtuts/tree/dev)
 [Found via this Stack Overflow answer](https://stackoverflow.com/a/42212642)
 
+# Convenient Commands
+
+Ubuntu
+
+```sh
+docker run -it --rm -v "$(pwd)/build_logs":/build_logs ubuntu
+
+apt update && apt -y upgrade
+```
+
+Alpine
+
+```sh
+docker build -t dspy .
+
+time docker build --progress=plain --no-cache -t dspy .
+
+docker run -it --rm dspy
+
+docker run -it --rm -v "$(pwd)/build_logs":/build_logs dspy
+```
+
 
 # Convenient Commands Redux
 
@@ -1166,10 +1223,26 @@ tip numpy==1.21.2
 apk list --installed
 apk del openblas openblas-dev gfortran
 
+function tip {
+  if [[ $# -eq 0 ]]; then
+    echo "No package given"
+    return 1
+  fi
 
+  PACKAGE=$1
+  PACKAGE_NAME=$(echo "$PACKAGE" | tr -s '==' '*' | cut -d'*' -f 1)
+
+  shift
+  PIP_OPTS=$@
+
+  { time pip install -vvv $PACKAGE $PIP_OPTS; } 2>&1 | tee ${PACKAGE_NAME}-$(date +"%s").log
+}
+
+
+tip scikit-learn==1.0
 ```
 
-
+---
 
 
 ```text
