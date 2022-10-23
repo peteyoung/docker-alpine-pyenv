@@ -6,9 +6,9 @@ PYTHON_VIRTUAL_ENV=p${PYTHON_VERSION}
 curl https://raw.githubusercontent.com/pyenv/pyenv-installer/master/bin/pyenv-installer | bash
 
 # initialize pyenv and virtual-env
-source $HOME/.init_pyenv
+source .bashrc
 
-# install a pythong
+# install a python
 pyenv install -v $PYTHON_VERSION
 
 # create a virtual-env
@@ -18,6 +18,5 @@ pyenv virtualenv $PYTHON_VERSION $PYTHON_VIRTUAL_ENV
 echo -e "\npyenv activate $PYTHON_VIRTUAL_ENV" >> $HOME/.bashrc
 
 # upgrade pip in the virtual-env
-source .bashrc
 pyenv activate $PYTHON_VIRTUAL_ENV
 pip install -U pip
